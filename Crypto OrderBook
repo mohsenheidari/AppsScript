@@ -1,0 +1,48 @@
+function fetchBTCIRTOrderBookStandard() {
+  const sheetName = "BTCIRT";
+  const spreadsheet = SpreadsheetApp.getActiveSpreadsheet();
+  const sheet = spreadsheet.getSheetByName(sheetName);
+  sheet.clear(); // پاک کردن داده‌های قبلی
+
+  const url = "https://apiv2.nobitex.ir/v3/orderbook/BTCIRT";
+  const response = UrlFetchApp.fetch(url);
+  const data = JSON.parse(response.getContentText());
+
+  if (data.status !== "ok") {
+    sheet.getRange("A1").setValue("Error fetching data");
+    return;
+  }
+
+  const now = new Date();
+
+  // Set column headers
+  sheet.getRange("A1").setValue("side");
+  sheet.getRange("B1").setValue("price");
+  sheet.getRange("C1").setValue("amount");
+  sheet.getRange("D1").setValue("timestamp");
+
+  // Format timestamp column
+  sheet.getRange("D:D").setNumberFormat("yyyy/MM/dd HH:mm:ss");
+
+  let row = 2;
+
+  // Bids (buy orders)
+  const bids = data.bids;
+  for (let i = 0; i < Math.min(bids.length, 10); i++) {
+    sheet.getRange(row, 1).setValue("buy");
+    sheet.getRange(row, 2).setValue(bids[i][0]);
+    sheet.getRange(row, 3).setValue(bids[i][1]);
+    sheet.getRange(row, 4).setValue(now);
+    row++;
+  }
+
+  // Asks (sell orders)
+  const asks = data.asks;
+  for (let i = 0; i < Math.min(asks.length, 10); i++) {
+    sheet.getRange(row, 1).setValue("sell");
+    sheet.getRange(row, 2).setValue(asks[i][0]);
+    sheet.getRange(row, 3).setValue(asks[i][1]);
+    sheet.getRange(row, 4).setValue(now);
+    row++;
+  }
+}
