@@ -1,5 +1,20 @@
 function fetchOrderBooksForAllPairs() {
-  const pairs = ["BTCIRT", "USDTIRT", "BTCUSDT", "ETHUSDT"];
+  const pairs = [
+    "USDTIRT",
+    "BTCIRT",
+    "BTCUSDT",
+    "PAXGUSDT",
+    "PAXGIRT",
+    "XAUTUSDT",
+    "XAUTIRT",
+    "ETHUSDT",
+    "BNBUSDT",
+    "XRPUSDT",
+    "TONUSDT",
+    "DOGEUSDT",
+    "TRXUSDT"
+  ];
+  
   const spreadsheet = SpreadsheetApp.getActiveSpreadsheet();
 
   pairs.forEach(function(pair) {
@@ -8,10 +23,6 @@ function fetchOrderBooksForAllPairs() {
       Logger.log("Sheet not found: " + pair);
       return;
     }
-
-    // پاک‌سازی محتواهای قبلی
-    sheet.getRange("A2:D").clearContent(); // خرید
-    sheet.getRange("F2:I").clearContent(); // فروش
 
     const url = `https://apiv2.nobitex.ir/v3/orderbook/${pair}`;
     const response = UrlFetchApp.fetch(url);
@@ -24,31 +35,24 @@ function fetchOrderBooksForAllPairs() {
 
     const now = new Date();
 
-    // عنوان‌ها با ترتیب درست
-    sheet.getRange("A1:D1").setValues([["side", "timestamp", "amount", "price"]]); // خرید
-    sheet.getRange("F1:I1").setValues([["side", "timestamp", "amount", "price"]]); // فروش
-
+    // Headers
+    sheet.getRange("A1:D1").setValues([["side", "timestamp", "amount", "price"]]);
+    sheet.getRange("F1:I1").setValues([["side", "timestamp", "amount", "price"]]);
     sheet.getRange("B:B").setNumberFormat("yyyy/MM/dd HH:mm:ss");
     sheet.getRange("G:G").setNumberFormat("yyyy/MM/dd HH:mm:ss");
 
-    // سفارش‌های خرید
-    const bids = data.bids;
-    for (let i = 0; i < Math.min(bids.length, 10); i++) {
-      const row = i + 2;
-      sheet.getRange(row, 1).setValue("buy");      // side
-      sheet.getRange(row, 2).setValue(now);        // timestamp
-      sheet.getRange(row, 3).setValue(bids[i][1]); // amount
-      sheet.getRange(row, 4).setValue(bids[i][0]); // price
+    // Bids
+    const bidRows = data.bids.slice(0, 10).map(bid => ["buy", now, bid[1], bid[0]]);
+    if (bidRows.length > 0) {
+      sheet.getRange(2, 1, bidRows.length, 4).clearContent();
+      sheet.getRange(2, 1, bidRows.length, 4).setValues(bidRows);
     }
 
-    // سفارش‌های فروش
-    const asks = data.asks;
-    for (let i = 0; i < Math.min(asks.length, 10); i++) {
-      const row = i + 2;
-      sheet.getRange(row, 6).setValue("sell");     // side
-      sheet.getRange(row, 7).setValue(now);        // timestamp
-      sheet.getRange(row, 8).setValue(asks[i][1]); // amount
-      sheet.getRange(row, 9).setValue(asks[i][0]); // price
+    // Asks
+    const askRows = data.asks.slice(0, 10).map(ask => ["sell", now, ask[1], ask[0]]);
+    if (askRows.length > 0) {
+      sheet.getRange(2, 6, askRows.length, 4).clearContent();
+      sheet.getRange(2, 6, askRows.length, 4).setValues(askRows);
     }
   });
 }
