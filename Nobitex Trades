@@ -1,0 +1,81 @@
+function fetchTradesForSelectedPairs() {
+  // Trading pairs to fetch
+  const pairs = [
+    "USDTIRT",
+    "BTCIRT",
+    "BTCUSDT",
+    "PAXGUSDT",
+    "PAXGIRT",
+    "XAUTUSDT",
+    "XAUTIRT"
+  ];
+
+  // Active spreadsheet
+  const spreadsheet = SpreadsheetApp.getActiveSpreadsheet();
+
+  pairs.forEach(function(pair) {
+    const sheet = spreadsheet.getSheetByName(pair);
+    if (!sheet) {
+      Logger.log("Sheet not found: " + pair);
+      return;
+    }
+
+    // Clear previous data
+    sheet.getRange("A2:D").clearContent(); // Buy
+    sheet.getRange("F2:I").clearContent(); // Sell
+
+    const url = `https://apiv2.nobitex.ir/v2/trades/${pair}`;
+    const options = {
+      method: "get",
+      muteHttpExceptions: true,
+      headers: {
+        "User-Agent": "Mozilla/5.0"
+      }
+    };
+
+    try {
+      const response = UrlFetchApp.fetch(url, options);
+      const data = JSON.parse(response.getContentText());
+
+      if (!data.trades || !Array.isArray(data.trades)) {
+        sheet.getRange("A1").setValue("No trades or invalid format");
+        return;
+      }
+
+      // Headers
+      sheet.getRange("A1:D1").setValues([["type", "time", "volume", "price"]]);
+      sheet.getRange("F1:I1").setValues([["type", "time", "volume", "price"]]);
+
+      sheet.getRange("B:B").setNumberFormat("yyyy/MM/dd HH:mm:ss");
+      sheet.getRange("G:G").setNumberFormat("yyyy/MM/dd HH:mm:ss");
+
+      // Arrays for batch writing
+      let buyData = [];
+      let sellData = [];
+
+      data.trades.forEach(function(trade) {
+        const time = new Date(trade.time);
+        if (trade.type === "buy") {
+          buyData.push(["buy", time, trade.volume, trade.price]);
+        } else if (trade.type === "sell") {
+          sellData.push(["sell", time, trade.volume, trade.price]);
+        }
+      });
+
+      // Batch write
+      if (buyData.length > 0) {
+        sheet.getRange(2, 1, buyData.length, 4).setValues(buyData);
+      }
+      if (sellData.length > 0) {
+        sheet.getRange(2, 6, sellData.length, 4).setValues(sellData);
+      }
+
+    } catch (error) {
+      Logger.log(`Error fetching ${pair}: ${error}`);
+      sheet.getRange("A1").setValue("Fetch error");
+    }
+
+    // Rate limit control (1 second pause between requests)
+    Utilities.sleep(1000);
+  });
+}
